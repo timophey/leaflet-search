@@ -49,7 +49,8 @@ L.Control.Search = L.Control.extend({
 		animateLocation: true,		//animate a circle over location found
 		circleLocation: true,		//draw a circle in location found
 		markerLocation: false,		//draw a marker in location found
-		markerIcon: new L.Icon.Default()//custom icon for maker location
+		markerIcon: new L.Icon.Default(),//custom icon for maker location
+		onSelect: null // select place event callback
 		//TODO history: false,		//show latest searches in tooltip		
 	},
 //FIXME option condition problem {autoCollapse: true, markerLocation: true} not show location
@@ -418,14 +419,12 @@ L.Control.Search = L.Control.extend({
 	_defaultFormatData: function(json) {	//default callback for format data to indexed data
 		var propName = this.options.propertyName,
 			propLoc = this.options.propertyLoc,
-			i, jsonret = {};
-
-		if( L.Util.isArray(propLoc) )
-			for(i in json)
-				jsonret[ this._getPath(json[i],propName) ]= L.latLng( json[i][ propLoc[0] ], json[i][ propLoc[1] ] );
-		else
-			for(i in json)
-				jsonret[ this._getPath(json[i],propName) ]= L.latLng( this._getPath(json[i],propLoc) );
+					i, jsonret = {}, isArrayPropLoc = L.Util.isArray(propLoc);
+				for(i in json){
+					var key = this._getPath(json[i],propName);
+					jsonret[key] = (isArrayPropLoc) ? L.latLng( json[i][ propLoc[0] ], json[i][ propLoc[1] ] ) : L.latLng( this._getPath(json[i],propLoc) );
+					jsonret[key].src = json[i];
+					}
 		//TODO throw new Error("propertyName '"+propName+"' not found in JSON data");
 		return jsonret;
 	},
@@ -758,6 +757,7 @@ L.Control.Search = L.Control.extend({
 			else
 			{
 				var loc = this._getLocation(this._input.value);
+				console.log('loc',loc)
 				
 				if(loc===false)
 					this.showAlert();
@@ -769,6 +769,14 @@ L.Control.Search = L.Control.extend({
 							text: this._input.value,
 							layer: loc.layer ? loc.layer : null
 						});
+					if(this.options.onSelect)
+						this.options.onSelect.call(this,loc/*{
+							location: this._getLocation(this._input.value),
+							latlng: loc,
+							text: this._input.value,
+							layer: loc.layer ? loc.layer : null
+						}*/);
+
 				}
 				//this.collapse();
 				//FIXME if collapse in _handleSubmit hide _markerLoc!
@@ -804,6 +812,7 @@ L.Control.Search = L.Control.extend({
 		//FIXME autoCollapse option hide this._markerLoc before that visualized!!
 		if(this.options.autoCollapse)
 			this.collapse();
+					
 		return this;
 	}
 });
